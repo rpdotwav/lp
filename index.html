@@ -128,12 +128,10 @@
     <div class="rail">
       <div class="btns">
       <button class="hw" id="play" disabled>
-        <span class="row"><span class="lamp"></span><span id="playText">START</span></span>
-        <small>45 RPM</small>
+        <span class="row"><span class="lamp"></span><span id="playText">PLAY</span></span>
       </button>
       <button class="hw" id="flip">
         <span class="row"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 5a5 5 0 0 1 9-2.2M12 9a5 5 0 0 1-9 2.2M11 .8v2.4H8.6M3 13.2v-2.4h2.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>FLIP</span>
-        <small id="flipText">TO SIDE B</small>
       </button>
       </div>
       <div class="readout" id="readout" aria-live="polite">
@@ -153,14 +151,18 @@
 (() => {
   // =====================================================================
   //  YOUR RECORD
-  //  Put two audio files in the same folder as this page.
-  //  "file" can include an extension ("my song.mp3") or leave it off
-  //  ("side-a") and the page tries .mp3, .m4a, .wav, .ogg, .flac, .aac.
-  //  "title" is what's printed on the label (blank = use the file name).
+  //  Put two audio files next to this page, named with the side first:
+  //      A - Song Name.mp3
+  //      B - Other Song.mp3
+  //  The label shows whatever comes after "A - " / "B - ".
+  //
+  //  Web pages can't always see what's in their folder, so type the two
+  //  file names here exactly. (If you leave them blank, the page looks
+  //  for the files itself, which only works on servers that list folders.)
   // =====================================================================
   const RECORD = {
-    A: { file: 'side-a', title: '' },
-    B: { file: 'side-b', title: '' }
+    A: 'A - Song Name.mp3',
+    B: 'B - Other Song.mp3'
   };
   const EXTENSIONS = ['mp3', 'm4a', 'wav', 'ogg', 'flac', 'aac'];
 
@@ -558,10 +560,32 @@
   });
 
   // ---------- load songs from this page's folder ----------
-  function candidates(file) {
-    const f = String(file || '').trim();
-    if (/\.[a-z0-9]{2,4}$/i.test(f)) return [f];
-    return EXTENSIONS.map(e => `${f}.${e}`);
+  const AUDIO_RE = new RegExp('\\.(' + EXTENSIONS.join('|') + ')$', 'i');
+  function titleFrom(name, key) {
+    const base = decodeURIComponent(String(name).split('/').pop()).replace(/\.[a-z0-9]{2,4}$/i, '').trim();
+    const m = base.match(/^(?:side[\s_-]*)?([ab])\s*[-–—_.]\s*(.+)$/i);
+    if (m && m[1].toUpperCase() === key && m[2].trim()) return m[2].trim();
+    return base.replace(/_+/g, ' ').trim() || 'Untitled';
+  }
+  function matchesSide(name, key) {
+    if (!AUDIO_RE.test(name)) return false;
+    const base = name.replace(AUDIO_RE, '').trim();
+    return new RegExp('^(?:side[\\s_-]*)?' + key + '(?:\\s*[-–—_.]\\s*.+)?$', 'i').test(base);
+  }
+  let listing = null;
+  async function listFolder() {
+    if (listing) return listing;
+    listing = (async () => {
+      try {
+        const r = await fetch('./', { cache: 'no-store' });
+        if (!r.ok) return [];
+        const doc = new DOMParser().parseFromString(await r.text(), 'text/html');
+        return [...doc.querySelectorAll('a[href]')]
+          .map(a => { try { return decodeURIComponent(a.getAttribute('href').split(/[?#]/)[0]).split('/').filter(Boolean).pop() || ''; } catch (e) { return ''; } })
+          .filter(n => AUDIO_RE.test(n));
+      } catch (e) { return []; }
+    })();
+    return listing;
   }
   function tryNext(key) {
     const s = sides[key];
@@ -569,22 +593,27 @@
     if (!next) {
       s.probing = false; s.url = null; s.missing = true;
       refreshCards();
-      const miss = ['A', 'B'].filter(k => sides[k].missing).map(k => {
-        const f = RECORD[k].file; return /\.[a-z0-9]{2,4}$/i.test(f) ? `“${f}”` : `“${f}.mp3” (or .m4a, .wav…)`;
-      });
+      const miss = ['A', 'B'].filter(k => sides[k].missing).map(k => RECORD[k] ? `“${RECORD[k]}”` : `side ${k}'s song`);
       status(`Couldn't find ${miss.join(' or ')} in the folder with this page.`);
       return;
     }
     s.url = next;
-    s.audio.src = encodeURI(next);
+    s.title = titleFrom(next, key);
+    s.audio.src = next.split('/').map(encodeURIComponent).join('/');
     s.audio.load();
   }
-  function loadSide(key) {
-    const s = sides[key], cfg = RECORD[key];
-    const base = String(cfg.file || '').replace(/\.[a-z0-9]{2,4}$/i, '').split('/').pop();
-    s.title = (cfg.title || '').trim() || base.replace(/[_-]+/g, ' ').trim() || 'Untitled';
-    s.queue = candidates(cfg.file); s.probing = true; s.missing = false;
-    buildTex(key); refreshCards();
+  async function loadSide(key) {
+    const s = sides[key], cfg = String(RECORD[key] || '').trim();
+    s.probing = true; s.missing = false; s.title = '';
+    refreshCards();
+    let queue = [];
+    if (cfg) queue = AUDIO_RE.test(cfg) ? [cfg] : EXTENSIONS.map(e => `${cfg}.${e}`);
+    else {
+      const found = (await listFolder()).filter(n => matchesSide(n, key));
+      found.sort((x, y) => y.length - x.length);          // prefer "A - Song Name" over plain "A"
+      queue = found.concat(...[`side-${key.toLowerCase()}`, key].map(b => EXTENSIONS.map(e => `${b}.${e}`)));
+    }
+    s.queue = queue;
     tryNext(key);
   }
 
@@ -592,9 +621,8 @@
   function refreshCards() {
     const s = sides[cur];
     $('nowSide').textContent = `SIDE ${cur}`;
-    $('nowTitle').textContent = s.missing ? `${RECORD[cur].file} not found` : (s.dur ? (s.title || 'Untitled') : 'Looking for file…');
+    $('nowTitle').textContent = s.missing ? `${RECORD[cur] || 'Side ' + cur + ' song'} not found` : (s.dur ? (s.title || 'Untitled') : 'Looking for file…');
     $('readout').classList.toggle('missing', !!s.missing);
-    $('flipText').textContent = `TO SIDE ${other(cur)}`;
     $('play').disabled = !s.url || !s.dur;
   }
 
@@ -754,7 +782,7 @@
 
     // front panel
     const busy = state === 'cueing' || state === 'playing' || state === 'runout';
-    setText('playText', busy ? 'STOP' : 'START');
+    setText('playText', busy ? 'STOP' : 'PLAY');
     $('play').classList.toggle('on', motorOn || omega > .05);
     $('flip').disabled = state === 'flipping';
     const shown = sides[cur];
