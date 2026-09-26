@@ -1,0 +1,697 @@
+<title>Flip Side 45</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root{
+    color-scheme: dark;
+    --room:#171a1f;
+    --ink:#ece6d9;
+    --muted:#a19f97;
+    --amber:#ffb347;
+    --focus:#f0c75e;
+    --display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    --body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  body{
+    background:
+      radial-gradient(1200px 700px at 40% -10%, #272c34 0%, transparent 62%),
+      var(--room);
+    color:var(--ink);
+    font:15px/1.5 var(--body);
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:28px 36px;display:grid;gap:12px}
+  .deck{container-type:inline-size;display:grid;filter:drop-shadow(0 26px 40px rgba(0,0,0,.5))}
+  canvas#deck{display:block;width:100%;max-width:100%;aspect-ratio:1000/760;border-radius:16px 16px 0 0;background:#3f2716;touch-action:manipulation}
+  canvas#deck:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+
+  /* brushed-aluminium front panel */
+  .rail{
+    display:flex;flex-wrap:wrap;align-items:center;
+    gap:clamp(10px,2cqw,22px);
+    padding:clamp(12px,1.8cqw,20px) clamp(14px,3.2cqw,34px);
+    border-radius:0 0 16px 16px;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 1px, rgba(0,0,0,.035) 1px 3px),
+      linear-gradient(180deg,#d2d6da 0%,#adb3b9 55%,#949aa0 100%);
+    border-top:2px solid #24160c;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.65), inset 0 -2px 0 rgba(0,0,0,.25);
+    color:#26292d;
+  }
+  .hw{
+    appearance:none;border:0;cursor:pointer;flex:none;
+    display:grid;place-items:center;align-content:center;gap:5px;
+    min-width:clamp(70px,9.5cqw,100px);height:clamp(50px,6.4cqw,66px);padding:0 12px;
+    border-radius:8px;
+    background:linear-gradient(#383c42,#1c1f23);
+    color:#ebe8e0;font:600 clamp(10.5px,1.15cqw,12.5px)/1 var(--mono);letter-spacing:.14em;
+    box-shadow:0 3px 0 #0d0e10, 0 6px 12px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.14);
+    transition:transform .08s, box-shadow .08s;
+  }
+  .hw:active{transform:translateY(2px);box-shadow:0 1px 0 #0d0e10, 0 2px 5px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.1)}
+  .hw:disabled{opacity:.5;cursor:not-allowed}
+  .hw:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+  .hw .row{display:flex;align-items:center;gap:7px}
+  .hw small{font:500 clamp(8.5px,.95cqw,10px)/1 var(--mono);letter-spacing:.12em;opacity:.6}
+  .hw svg{width:12px;height:12px}
+  .lamp{width:8px;height:8px;border-radius:50%;background:#5b3c22;box-shadow:inset 0 1px 1px rgba(0,0,0,.6);transition:background .2s, box-shadow .2s}
+  .hw.on .lamp{background:var(--amber);box-shadow:0 0 8px 2px rgba(255,179,71,.65)}
+
+  .readout{
+    flex:1 1 200px;min-width:0;display:grid;gap:4px;
+    background:#0f1113;border-radius:6px;padding:9px 12px;
+    box-shadow:inset 0 2px 7px rgba(0,0,0,.85), 0 1px 0 rgba(255,255,255,.55);
+    color:var(--amber);
+  }
+  .ro-top{display:flex;justify-content:space-between;gap:10px;font:500 clamp(9px,1cqw,11px)/1 var(--mono);letter-spacing:.12em;font-variant-numeric:tabular-nums;opacity:.85}
+  .ro-title{font:700 clamp(14px,1.8cqw,19px)/1.2 var(--display);color:#ffd08a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 0 8px rgba(255,179,71,.3)}
+  .readout.missing .ro-title{color:#ff8f6e}
+
+  .faders{display:flex;gap:clamp(12px,2cqw,22px)}
+  .fader{display:grid;gap:5px;width:clamp(110px,14cqw,160px);font:600 clamp(9px,1cqw,10.5px)/1 var(--mono);letter-spacing:.14em;color:#2a2d32}
+  .fader span{display:flex;justify-content:space-between}
+  .fader span i{font-style:normal;opacity:.55;font-variant-numeric:tabular-nums}
+  @container (max-width:640px){
+    .faders{flex:1 1 100%}
+    .fader{flex:1;width:auto}
+  }
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:24px;background:transparent;margin:0;cursor:pointer}
+  input[type=range]:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+  input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:#1a1c1f;box-shadow:inset 0 1px 2px rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.5)}
+  input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:#1a1c1f;box-shadow:inset 0 1px 2px rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.5)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:24px;margin-top:-9px;border-radius:3px;border:1px solid #4d5156;background:linear-gradient(90deg,#9ea4aa,#f4f5f6 45%,#9ea4aa);box-shadow:0 2px 3px rgba(0,0,0,.45), inset 0 0 0 5px transparent}
+  input[type=range]::-moz-range-thumb{width:12px;height:22px;border-radius:3px;border:1px solid #4d5156;background:linear-gradient(90deg,#9ea4aa,#f4f5f6 45%,#9ea4aa);box-shadow:0 2px 3px rgba(0,0,0,.45)}
+
+  .status{margin:0;min-height:1.3em;font-size:13px;color:var(--amber);text-align:center}
+  @media (prefers-reduced-motion: reduce){.hw{transition:none}}
+</style>
+
+<div class="wrap">
+  <div class="deck">
+    <canvas id="deck" tabindex="0" role="img" title="Click the grooves to drop the needle there" aria-label="Turntable with a 45 RPM record on the platter"></canvas>
+    <div class="rail">
+      <button class="hw" id="play" disabled>
+        <span class="row"><span class="lamp"></span><span id="playText">START</span></span>
+        <small>45 RPM</small>
+      </button>
+      <button class="hw" id="flip">
+        <span class="row"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 5a5 5 0 0 1 9-2.2M12 9a5 5 0 0 1-9 2.2M11 .8v2.4H8.6M3 13.2v-2.4h2.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>FLIP</span>
+        <small id="flipText">TO SIDE B</small>
+      </button>
+      <div class="readout" id="readout" aria-live="polite">
+        <div class="ro-top"><span id="nowSide">SIDE A</span><span id="tTime">0:00 / –:––</span></div>
+        <div class="ro-title" id="nowTitle">Looking for file…</div>
+      </div>
+      <div class="faders">
+        <label class="fader" for="vol"><span>VOLUME <i id="volVal">85</i></span><input type="range" id="vol" min="0" max="100" value="85"></label>
+        <label class="fader" for="crackle"><span>SURFACE NOISE <i id="crackleVal">35</i></span><input type="range" id="crackle" min="0" max="100" value="35"></label>
+      </div>
+    </div>
+  </div>
+  <p class="status" id="status" role="status"></p>
+</div>
+
+<script>
+(() => {
+  // =====================================================================
+  //  YOUR RECORD
+  //  Put two audio files in the same folder as this page.
+  //  "file" can include an extension ("my song.mp3") or leave it off
+  //  ("side-a") and the page tries .mp3, .m4a, .wav, .ogg, .flac, .aac.
+  //  "title" is what's printed on the label (blank = use the file name).
+  // =====================================================================
+  const RECORD = {
+    A: { file: 'side-a', title: '' },
+    B: { file: 'side-b', title: '' }
+  };
+  const EXTENSIONS = ['mp3', 'm4a', 'wav', 'ogg', 'flac', 'aac'];
+
+  // ---------- geometry (logical units) ----------
+  const W = 1000, H = 760, CX = 400, CY = 380;
+  const R_PLAT = 338, R_REC = 300, R_LABEL = 146, R_HOLE = 32;
+  const R_START = 286, R_END = 166, R_RUNOUT = 156;
+  const PIV = { x: 842, y: 150 }, ARM_L = 470;
+  const OMEGA45 = 2 * Math.PI * 45 / 60;
+  const BASE_ANG = Math.atan2(CY - PIV.y, CX - PIV.x);
+  const D = Math.hypot(CX - PIV.x, CY - PIV.y);
+  const REST = Math.PI / 2 + 0.015;
+  const angleForR = r => {
+    const c = (D * D + ARM_L * ARM_L - r * r) / (2 * D * ARM_L);
+    return BASE_ANG - Math.acos(Math.max(-1, Math.min(1, c)));
+  };
+  const rFor = p => R_START - p * (R_START - R_END);
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const mulberry = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const fmt = s => { if (!isFinite(s) || s < 0) return '–:––'; s = Math.floor(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+  const $ = id => document.getElementById(id);
+
+  // ---------- sides ----------
+  function makeAudio() {
+    const a = new Audio();
+    a.preload = 'auto';
+    a.preservesPitch = false; a.mozPreservesPitch = false; a.webkitPreservesPitch = false;
+    return a;
+  }
+  const sides = {
+    A: { key: 'A', title: '', audio: makeAudio(), url: null, dur: 0, pos: 0, missing: false,
+         color: '#d8a531', ink: '#241906', cat: 'FS-4501-A', seed: 11, tex: null },
+    B: { key: 'B', title: '', audio: makeAudio(), url: null, dur: 0, pos: 0, missing: false,
+         color: '#2f7c76', ink: '#eef1e8', cat: 'FS-4501-B', seed: 29, tex: null }
+  };
+  const other = k => k === 'A' ? 'B' : 'A';
+  let cur = 'A';
+
+  // ---------- canvas ----------
+  const cv = $('deck'), ctx = cv.getContext('2d');
+  let scale = 1, plinth = null;
+
+  function resize() {
+    const w = cv.clientWidth || 800;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    scale = (w / W) * dpr;
+    cv.width = Math.round(W * scale); cv.height = Math.round(H * scale);
+    plinth = buildPlinth();
+    buildTex('A'); buildTex('B');
+  }
+
+  function disc(g, x, y, r) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); }
+  function rrect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+
+  function buildPlinth() {
+    const c = document.createElement('canvas');
+    c.width = cv.width; c.height = cv.height;
+    const g = c.getContext('2d');
+    g.scale(scale, scale);
+    // room behind
+    g.fillStyle = '#171a1f'; g.fillRect(0, 0, W, H);
+    // walnut body
+    rrect(g, 0, 0, W, H + 40, 22);
+    const wood = g.createLinearGradient(0, 0, W, H);
+    wood.addColorStop(0, '#6a4329'); wood.addColorStop(.45, '#553420'); wood.addColorStop(1, '#3b2415');
+    g.fillStyle = wood; g.fill();
+    g.save(); g.clip();
+    const rnd = mulberry(7);
+    for (let i = 0; i < 170; i++) {
+      const y0 = rnd() * H, amp = 4 + rnd() * 14, f = .002 + rnd() * .006, ph = rnd() * 6;
+      g.beginPath();
+      for (let x = -10; x <= W + 10; x += 20) {
+        const y = y0 + Math.sin(x * f + ph) * amp + Math.sin(x * f * 3.1 + ph) * amp * .25;
+        x < 0 ? g.moveTo(x, y) : g.lineTo(x, y);
+      }
+      g.strokeStyle = rnd() < .6 ? `rgba(30,15,6,${.05 + rnd() * .12})` : `rgba(255,210,160,${.02 + rnd() * .05})`;
+      g.lineWidth = .6 + rnd() * 2.2; g.stroke();
+    }
+    const vig = g.createRadialGradient(W * .4, H * .35, 100, W * .5, H * .5, 720);
+    vig.addColorStop(0, 'rgba(255,220,180,.06)'); vig.addColorStop(1, 'rgba(0,0,0,.35)');
+    g.fillStyle = vig; g.fillRect(0, 0, W, H);
+    g.restore();
+    rrect(g, 1.5, 1.5, W - 3, H + 40, 21); g.strokeStyle = 'rgba(255,225,190,.14)'; g.lineWidth = 2; g.stroke();
+
+    // brand plate
+    g.fillStyle = 'rgba(255,236,210,.42)'; g.font = '600 11px "IBM Plex Mono", monospace';
+    g.textAlign = 'left'; g.textBaseline = 'middle';
+    g.fillText('FLIPSIDE  ·  MODEL 45', 34, 40);
+
+    // tonearm base
+    g.save(); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 16; g.shadowOffsetY = 6;
+    disc(g, PIV.x, PIV.y, 54); const b = g.createRadialGradient(PIV.x - 18, PIV.y - 18, 4, PIV.x, PIV.y, 54);
+    b.addColorStop(0, '#d9dde1'); b.addColorStop(1, '#6e747b'); g.fillStyle = b; g.fill(); g.restore();
+    disc(g, PIV.x, PIV.y, 34); g.fillStyle = '#2c2f34'; g.fill();
+
+    // arm rest post
+    const rx = PIV.x + Math.cos(REST) * 340, ry = PIV.y + Math.sin(REST) * 340;
+    g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = 8; g.shadowOffsetY = 3;
+    disc(g, rx, ry, 13); g.fillStyle = '#a9aeb4'; g.fill(); g.restore();
+    rrect(g, rx - 11, ry - 5, 22, 10, 4); g.fillStyle = '#26282c'; g.fill();
+    return c;
+  }
+
+  function arcText(g, text, r, mid, font, spacing) {
+    g.font = font;
+    const chars = [...text];
+    const ws = chars.map(ch => g.measureText(ch).width + spacing);
+    const total = ws.reduce((a, b) => a + b, 0);
+    let ang = mid - total / r / 2;
+    chars.forEach((ch, i) => {
+      g.save(); g.rotate(ang + ws[i] / 2 / r); g.translate(0, -r); g.fillText(ch, 0, 0); g.restore();
+      ang += ws[i] / r;
+    });
+  }
+
+  function wrap(g, text, maxW, maxLines) {
+    const words = text.trim().split(/\s+/).filter(Boolean);
+    const lines = []; let line = '';
+    for (const w of words) {
+      const t = line ? line + ' ' + w : w;
+      if (g.measureText(t).width <= maxW || !line) line = t; else { lines.push(line); line = w; }
+    }
+    if (line) lines.push(line);
+    if (lines.length > maxLines) {
+      const kept = lines.slice(0, maxLines);
+      let last = kept[maxLines - 1] + ' ' + lines.slice(maxLines).join(' ');
+      while (g.measureText(last + '…').width > maxW && last.length) last = last.slice(0, -1);
+      kept[maxLines - 1] = last.trim() + '…';
+      return kept;
+    }
+    return lines.map(l => { let s = l; while (g.measureText(s).width > maxW && s.length > 1) s = s.slice(0, -1); return s === l ? l : s + '…'; });
+  }
+
+  function buildTex(key) {
+    const s = sides[key];
+    const px = Math.ceil(2 * R_REC * scale);
+    const c = s.tex || document.createElement('canvas');
+    c.width = c.height = px;
+    const g = c.getContext('2d');
+    const k = px / (2 * R_REC);
+    g.setTransform(k, 0, 0, k, R_REC * k, R_REC * k);
+
+    // vinyl
+    disc(g, 0, 0, R_REC); g.fillStyle = '#0c0c0e'; g.fill();
+    const rnd = mulberry(s.seed);
+    g.lineWidth = .75;
+    for (let r = R_REC - 7; r > R_START + 2; r -= 3.6) { disc(g, 0, 0, r); g.strokeStyle = 'rgba(210,215,225,.035)'; g.stroke(); }
+    for (let r = R_START; r > R_END; r -= 1.05) {
+      const loud = .5 + .5 * Math.sin(r * .085 + s.seed) * Math.sin(r * .021 + s.seed * .3);
+      disc(g, 0, 0, r);
+      g.strokeStyle = `rgba(205,212,225,${.022 + loud * .055 + rnd() * .018})`;
+      g.stroke();
+    }
+    g.lineWidth = 1.2;
+    [R_START, R_END].forEach(r => { disc(g, 0, 0, r); g.strokeStyle = 'rgba(220,225,235,.10)'; g.stroke(); });
+    disc(g, 0, 0, R_LABEL + 5); g.strokeStyle = 'rgba(220,225,235,.07)'; g.stroke();
+    g.lineWidth = 5; disc(g, 0, 0, R_REC - 2.5); g.strokeStyle = 'rgba(255,255,255,.05)'; g.stroke();
+    // matrix number scratched in the run-out
+    g.fillStyle = 'rgba(230,230,235,.16)'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    arcText(g, s.cat + '-1  △ 2026', (R_END + R_LABEL) / 2 + 1, Math.PI, 'italic 500 8px "IBM Plex Mono", monospace', .6);
+
+    // label
+    disc(g, 0, 0, R_LABEL); g.fillStyle = s.color; g.fill();
+    const sh = g.createRadialGradient(-40, -50, 10, 0, 0, R_LABEL);
+    sh.addColorStop(0, 'rgba(255,255,255,.10)'); sh.addColorStop(1, 'rgba(0,0,0,.14)');
+    disc(g, 0, 0, R_LABEL); g.fillStyle = sh; g.fill();
+    g.globalAlpha = .38; g.strokeStyle = s.ink; g.lineWidth = 1;
+    disc(g, 0, 0, R_LABEL - 9); g.stroke();
+    disc(g, 0, 0, R_HOLE + 10); g.stroke();
+    g.globalAlpha = 1;
+
+    g.fillStyle = s.ink; g.textAlign = 'center'; g.textBaseline = 'middle';
+    arcText(g, 'FLIPSIDE RECORDS', R_LABEL - 23, 0, '700 11px "Bricolage Grotesque", sans-serif', 1.8);
+    g.font = '500 9.5px "IBM Plex Mono", monospace'; g.fillText(s.cat, 0, -62);
+    g.font = '500 8.5px "IBM Plex Mono", monospace'; g.fillText('SIDE', -84, -27);
+    g.font = '800 50px "Bricolage Grotesque", sans-serif'; g.fillText(s.key, -84, 9);
+    g.font = '800 30px "Bricolage Grotesque", sans-serif'; g.fillText('45', 84, -2);
+    g.font = '500 8.5px "IBM Plex Mono", monospace'; g.fillText('RPM', 84, 20);
+
+    g.font = '700 17px "Bricolage Grotesque", sans-serif';
+    const lines = wrap(g, s.title || 'Untitled', 214, 2);
+    const y0 = lines.length > 1 ? 56 : 64;
+    lines.forEach((l, i) => g.fillText(l, 0, y0 + i * 20));
+    g.font = '500 9.5px "IBM Plex Mono", monospace';
+    g.fillText('STEREO  ·  ' + (s.dur ? fmt(s.dur) : '–:––'), 0, 101);
+    g.globalAlpha = .7; g.font = '500 8px "IBM Plex Mono", monospace'; g.fillText('℗ 2026', 0, 119); g.globalAlpha = 1;
+
+    // centre hole
+    g.globalCompositeOperation = 'destination-out';
+    disc(g, 0, 0, R_HOLE); g.fill();
+    g.globalCompositeOperation = 'source-over';
+    s.tex = c;
+  }
+
+  // ---------- state ----------
+  let state = 'idle';       // idle | cueing | playing | stopping | runout | returning | flipping
+  let angle = REST, lift = 0, omega = 0, rot = 0, flipT = 0, flipped = false, pendingFlip = false;
+  let runoutLeft = 0, lastRev = 0;
+
+  function drawPlatter() {
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 34; ctx.shadowOffsetY = 12;
+    disc(ctx, CX, CY, R_PLAT); ctx.fillStyle = '#8d9399'; ctx.fill(); ctx.restore();
+    const rim = ctx.createLinearGradient(CX - R_PLAT, CY - R_PLAT, CX + R_PLAT, CY + R_PLAT);
+    rim.addColorStop(0, '#eceef0'); rim.addColorStop(.5, '#8a9096'); rim.addColorStop(1, '#d3d7db');
+    disc(ctx, CX, CY, R_PLAT); ctx.fillStyle = rim; ctx.fill();
+    // strobe dots
+    ctx.save(); ctx.translate(CX, CY); ctx.rotate(rot); ctx.fillStyle = 'rgba(28,30,34,.6)';
+    for (let i = 0; i < 90; i++) { ctx.rotate(Math.PI * 2 / 90); ctx.fillRect(-1.6, -(R_PLAT - 3), 3.2, 7); }
+    ctx.restore();
+    // rubber mat
+    disc(ctx, CX, CY, R_PLAT - 14); ctx.fillStyle = '#1b1c1f'; ctx.fill();
+    ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(255,255,255,.035)';
+    for (let r = 50; r < R_PLAT - 16; r += 11) { disc(ctx, CX, CY, r); ctx.stroke(); }
+  }
+
+  function drawAdapter() {
+    ctx.save(); ctx.translate(CX, CY); ctx.rotate(rot * 1);
+    disc(ctx, 0, 0, R_HOLE - .5);
+    const ad = ctx.createRadialGradient(-8, -8, 2, 0, 0, R_HOLE);
+    ad.addColorStop(0, '#f3f4f5'); ad.addColorStop(1, '#8b9197'); ctx.fillStyle = ad; ctx.fill();
+    ctx.fillStyle = '#3a3d42';
+    for (let i = 0; i < 3; i++) { ctx.rotate(Math.PI * 2 / 3); ctx.beginPath(); ctx.ellipse(0, -20, 6, 9, 0, 0, Math.PI * 2); ctx.fill(); }
+    disc(ctx, 0, 0, 5.5); ctx.fillStyle = '#e8eaec'; ctx.fill();
+    ctx.restore();
+  }
+
+  function drawRecord() {
+    const s = sides[cur];
+    const ft = state === 'flipping' ? flipT : 0;
+    const up = Math.sin(Math.PI * ft);
+    const sx = Math.max(.02, Math.abs(Math.cos(Math.PI * ft)));
+    const lift3d = 1 + up * .06;
+    if (up > 0) {
+      ctx.save(); ctx.fillStyle = `rgba(0,0,0,${.35 * up})`; ctx.filter = 'blur(10px)';
+      ctx.beginPath(); ctx.ellipse(CX + 10, CY + 16, R_REC * sx, R_REC, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    }
+    ctx.save();
+    ctx.translate(CX, CY - up * 22);
+    ctx.scale(sx * lift3d, lift3d);
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 8 + up * 20; ctx.shadowOffsetY = 3;
+    ctx.rotate(rot);
+    ctx.drawImage(s.tex, -R_REC, -R_REC, R_REC * 2, R_REC * 2);
+    ctx.restore();
+    // light sheen, fixed relative to the room
+    if (ctx.createConicGradient) {
+      ctx.save();
+      ctx.beginPath(); ctx.arc(0, 0, R_REC - 1, 0, Math.PI * 2); ctx.arc(0, 0, R_LABEL + 2, 0, Math.PI * 2, true); ctx.clip();
+      const cg = ctx.createConicGradient(-0.9, 0, 0);
+      cg.addColorStop(0, 'rgba(255,255,255,0)'); cg.addColorStop(.07, 'rgba(255,248,235,.13)'); cg.addColorStop(.14, 'rgba(255,255,255,0)');
+      cg.addColorStop(.5, 'rgba(255,255,255,0)'); cg.addColorStop(.57, 'rgba(210,225,255,.08)'); cg.addColorStop(.64, 'rgba(255,255,255,0)');
+      cg.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = cg; ctx.fillRect(-R_REC, -R_REC, R_REC * 2, R_REC * 2);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  function drawArm(th, h, shadow) {
+    const dx = Math.cos(th), dy = Math.sin(th);
+    const N = { x: PIV.x + ARM_L * dx, y: PIV.y + ARM_L * dy };
+    const ha = th - .4, hx = Math.cos(ha), hy = Math.sin(ha);
+    const T = { x: N.x - hx * 56, y: N.y - hy * 56 };
+    const C1 = { x: PIV.x - dx * 58, y: PIV.y - dy * 58 }, C2 = { x: PIV.x - dx * 112, y: PIV.y - dy * 112 };
+    ctx.save();
+    if (shadow) {
+      ctx.translate(7 + h * 16, 10 + h * 18);
+      ctx.globalAlpha = .38 - h * .1;
+      ctx.filter = `blur(${3 + h * 4}px)`;
+    }
+    const col = (c) => shadow ? '#000' : c;
+    ctx.lineCap = 'round';
+    // counterweight
+    ctx.lineWidth = 34; ctx.strokeStyle = col('#2a2d32');
+    ctx.beginPath(); ctx.moveTo(C1.x, C1.y); ctx.lineTo(C2.x, C2.y); ctx.stroke();
+    if (!shadow) { ctx.lineWidth = 30; ctx.strokeStyle = '#3a3e45'; ctx.beginPath(); ctx.moveTo(C1.x, C1.y); ctx.lineTo(C2.x, C2.y); ctx.stroke(); }
+    ctx.lineWidth = 8; ctx.strokeStyle = col('#8f959c');
+    ctx.beginPath(); ctx.moveTo(PIV.x, PIV.y); ctx.lineTo(C1.x, C1.y); ctx.stroke();
+    // tube
+    ctx.lineWidth = 13; ctx.strokeStyle = col('#6d737a');
+    ctx.beginPath(); ctx.moveTo(PIV.x, PIV.y); ctx.lineTo(T.x, T.y); ctx.stroke();
+    if (!shadow) {
+      ctx.lineWidth = 9; ctx.strokeStyle = '#d6dade'; ctx.beginPath(); ctx.moveTo(PIV.x, PIV.y); ctx.lineTo(T.x, T.y); ctx.stroke();
+      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,.85)';
+      ctx.beginPath(); ctx.moveTo(PIV.x - dy * 2, PIV.y + dx * 2 - 1); ctx.lineTo(T.x - dy * 2, T.y + dx * 2 - 1); ctx.stroke();
+    }
+    // headshell
+    ctx.translate(T.x, T.y); ctx.rotate(ha);
+    ctx.fillStyle = col('#1f2226'); rrect(ctx, -6, -13, 70, 26, 5); ctx.fill();
+    ctx.fillStyle = col('#15171a'); rrect(ctx, 6, -16, 12, 32, 3); ctx.fill();          // finger lift base
+    ctx.fillStyle = col('#9aa0a6'); rrect(ctx, 10, -34, 5, 22, 2); ctx.fill();           // finger lift
+    if (!shadow) {
+      ctx.fillStyle = '#b8382f'; rrect(ctx, 28, -9, 30, 18, 3); ctx.fill();            // cartridge
+      ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(30, -7, 26, 2);
+      ctx.fillStyle = '#e9eaeb'; disc(ctx, 56, 0, 2.2); ctx.fill();                     // stylus tip
+    }
+    ctx.restore();
+    if (!shadow) {
+      disc(ctx, PIV.x, PIV.y, 16); ctx.fillStyle = '#cfd3d7'; ctx.fill();
+      disc(ctx, PIV.x, PIV.y, 6); ctx.fillStyle = '#4a4e55'; ctx.fill();
+    }
+  }
+
+  // ---------- crackle ----------
+  let ac = null, crackGain = null, lastLevel = 0, clickBuf = null;
+  function ensureAC() {
+    try {
+      if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
+      ac = new (window.AudioContext || window.webkitAudioContext)();
+      const sr = ac.sampleRate, len = sr * 5;
+      const buf = ac.createBuffer(2, len, sr);
+      const r = mulberry(3);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = buf.getChannelData(ch); let lp = 0;
+        for (let i = 0; i < len; i++) { const n = r() * 2 - 1; lp += (n - lp) * .25; d[i] = lp * .05; }
+        for (let k = 0; k < 70; k++) {
+          const at = Math.floor(r() * (len - 400)), amp = (.15 + r() * .75) * (r() < .5 ? -1 : 1), L = 8 + Math.floor(r() * 40);
+          for (let j = 0; j < L; j++) d[at + j] += amp * Math.exp(-j / (L / 4)) * (r() * 2 - 1);
+        }
+      }
+      const src = ac.createBufferSource(); src.buffer = buf; src.loop = true;
+      const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2400; f.Q.value = .5;
+      crackGain = ac.createGain(); crackGain.gain.value = 0;
+      src.connect(f).connect(crackGain).connect(ac.destination); src.start();
+      clickBuf = ac.createBuffer(1, Math.floor(sr * .06), sr);
+      const cd = clickBuf.getChannelData(0);
+      for (let i = 0; i < cd.length; i++) cd[i] = (r() * 2 - 1) * Math.exp(-i / (sr * .006)) * .7 + Math.sin(i / sr * 2 * Math.PI * 70) * Math.exp(-i / (sr * .02)) * .5;
+    } catch (e) { ac = null; }
+  }
+  function runoutClick() {
+    if (!ac || !clickBuf) return;
+    const s = ac.createBufferSource(); s.buffer = clickBuf;
+    const g = ac.createGain(); g.gain.value = (+$('crackle').value / 100) * .5 + .08;
+    s.connect(g).connect(ac.destination); s.start();
+  }
+
+  // ---------- transport ----------
+  const status = msg => { $('status').textContent = msg || ''; };
+
+  function play() {
+    const s = sides[cur];
+    if (!s.url) { status(`Side ${cur} has no song. Put the file next to this page and reload.`); return; }
+    ensureAC(); status('');
+    if (s.dur && s.pos >= s.dur - .25) s.pos = 0;
+    state = 'cueing';
+  }
+  function stop() {
+    const a = sides[cur].audio;
+    if (state === 'playing') state = 'stopping';
+    else if (state === 'cueing' || state === 'runout') { if (state === 'runout') sides[cur].pos = 0; a.pause(); state = 'returning'; }
+  }
+  function startAudio() {
+    const s = sides[cur], a = s.audio;
+    try { a.currentTime = s.pos; } catch (e) {}
+    a.playbackRate = 1; a.volume = +$('vol').value / 100;
+    state = 'playing';
+    const p = a.play();
+    if (p && p.catch) p.catch(() => { state = 'returning'; status('The browser blocked playback. Press Play again.'); });
+  }
+  function flip() {
+    if (state === 'flipping') return;
+    if (state === 'idle') return startFlip();
+    pendingFlip = true;
+    if (state === 'playing') { sides[cur].pos = sides[cur].audio.currentTime; }
+    sides[cur].audio.pause();
+    if (state !== 'returning') state = 'returning';
+  }
+  function startFlip() {
+    state = 'flipping'; flipT = reduceMotion ? 1 : 0; flipped = false;
+  }
+  function cueAt(p) {
+    const s = sides[cur];
+    if (!s.url || state === 'flipping') return;
+    s.pos = Math.max(0, Math.min(1, p)) * (s.dur || 0);
+    if (state === 'playing' || state === 'stopping' || state === 'runout') { s.audio.pause(); s.audio.playbackRate = 1; }
+    ensureAC(); status('');
+    state = 'cueing';
+  }
+
+  Object.values(sides).forEach(s => {
+    s.audio.addEventListener('loadedmetadata', () => {
+      s.dur = isFinite(s.audio.duration) ? s.audio.duration : 0;
+      buildTex(s.key); refreshCards();
+    });
+    s.audio.addEventListener('ended', () => {
+      if (s.key === cur && (state === 'playing' || state === 'stopping')) { state = 'runout'; runoutLeft = 4.2; s.pos = 0; }
+    });
+    s.audio.addEventListener('error', () => {
+      if (s.probing) { tryNext(s.key); return; }
+      status(`Side ${s.key}: ${s.url} couldn't be played.`);
+      if (s.key === cur && state !== 'idle' && state !== 'flipping') state = 'returning';
+    });
+    s.audio.addEventListener('loadedmetadata', () => { s.probing = false; });
+  });
+
+  // ---------- load songs from this page's folder ----------
+  function candidates(file) {
+    const f = String(file || '').trim();
+    if (/\.[a-z0-9]{2,4}$/i.test(f)) return [f];
+    return EXTENSIONS.map(e => `${f}.${e}`);
+  }
+  function tryNext(key) {
+    const s = sides[key];
+    const next = s.queue.shift();
+    if (!next) {
+      s.probing = false; s.url = null; s.missing = true;
+      refreshCards();
+      const miss = ['A', 'B'].filter(k => sides[k].missing).map(k => {
+        const f = RECORD[k].file; return /\.[a-z0-9]{2,4}$/i.test(f) ? `“${f}”` : `“${f}.mp3” (or .m4a, .wav…)`;
+      });
+      status(`Couldn't find ${miss.join(' or ')} in the folder with this page.`);
+      return;
+    }
+    s.url = next;
+    s.audio.src = encodeURI(next);
+    s.audio.load();
+  }
+  function loadSide(key) {
+    const s = sides[key], cfg = RECORD[key];
+    const base = String(cfg.file || '').replace(/\.[a-z0-9]{2,4}$/i, '').split('/').pop();
+    s.title = (cfg.title || '').trim() || base.replace(/[_-]+/g, ' ').trim() || 'Untitled';
+    s.queue = candidates(cfg.file); s.probing = true; s.missing = false;
+    buildTex(key); refreshCards();
+    tryNext(key);
+  }
+
+  // ---------- UI wiring ----------
+  function refreshCards() {
+    const s = sides[cur];
+    $('nowSide').textContent = `SIDE ${cur}`;
+    $('nowTitle').textContent = s.missing ? `${RECORD[cur].file} not found` : (s.dur ? (s.title || 'Untitled') : 'Looking for file…');
+    $('readout').classList.toggle('missing', !!s.missing);
+    $('flipText').textContent = `TO SIDE ${other(cur)}`;
+    $('play').disabled = !s.url || !s.dur;
+  }
+
+  $('play').addEventListener('click', () => {
+    if (state === 'cueing' || state === 'playing' || state === 'runout') stop(); else play();
+  });
+  $('flip').addEventListener('click', flip);
+  $('vol').addEventListener('input', e => { Object.values(sides).forEach(s => s.audio.volume = +e.target.value / 100); });
+  $('vol').addEventListener('input', e => { $('volVal').textContent = e.target.value; });
+  $('crackle').addEventListener('input', e => { $('crackleVal').textContent = e.target.value; });
+
+  function logical(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; }
+  function grooveP(e) {
+    const { x, y } = logical(e); const r = Math.hypot(x - CX, y - CY);
+    if (r > R_REC || r < R_END - 4) return null;
+    return Math.max(0, Math.min(1, (R_START - r) / (R_START - R_END)));
+  }
+  cv.addEventListener('pointermove', e => { cv.style.cursor = grooveP(e) != null && state !== 'flipping' ? 'pointer' : 'default'; });
+  cv.addEventListener('click', e => { const p = grooveP(e); if (p != null) cueAt(p); });
+
+  document.addEventListener('keydown', e => {
+    const t = e.target;
+    if (t.closest && t.closest('input,textarea,select,button,label')) return;
+    if (e.code === 'Space') { e.preventDefault(); $('play').click(); }
+    else if (e.key === 'f' || e.key === 'F') { flip(); }
+  });
+
+  // ---------- loop ----------
+  let last = performance.now(), lastUI = {};
+  function setText(id, v) { if (lastUI[id] !== v) { lastUI[id] = v; $(id).textContent = v; } }
+
+  function frame(now) {
+    const dt = Math.min(.05, (now - last) / 1000); last = now;
+    const s = sides[cur], a = s.audio;
+
+    // motor
+    const motorOn = state === 'cueing' || state === 'playing' || state === 'runout';
+    if (state === 'stopping') omega = Math.max(0, omega - OMEGA45 * dt / .9);
+    else if (motorOn) omega = Math.min(OMEGA45, omega + OMEGA45 * dt / .6);
+    else omega = Math.max(0, omega - OMEGA45 * dt / 1.8);
+    rot += omega * dt;
+
+    if ((state === 'playing' || state === 'stopping') && s.dur) s.pos = a.currentTime;
+    const p = s.dur ? Math.min(1, s.pos / s.dur) : 0;
+
+    let tgt = REST, liftT = 0;
+    switch (state) {
+      case 'idle': break;
+      case 'cueing': {
+        tgt = angleForR(rFor(p)); liftT = 1;
+        const there = Math.abs(angle - tgt) < .004;
+        if (lift < .92 && !there) tgt = angle;
+        if (there && omega > OMEGA45 * .97 && s.audio.readyState >= 1) { liftT = 0; if (lift < .03) startAudio(); }
+        break;
+      }
+      case 'playing': tgt = angleForR(rFor(p)); break;
+      case 'stopping': {
+        tgt = angle;
+        const ratio = omega / OMEGA45;
+        a.playbackRate = Math.max(.07, ratio);
+        if (ratio < .1) { a.pause(); a.playbackRate = 1; s.pos = a.currentTime; state = 'returning'; }
+        break;
+      }
+      case 'runout': {
+        tgt = angleForR(R_RUNOUT);
+        const rev = Math.floor(rot / (Math.PI * 2));
+        if (rev !== lastRev && lift < .1) runoutClick();
+        runoutLeft -= dt;
+        if (runoutLeft <= 0) state = 'returning';
+        break;
+      }
+      case 'returning': {
+        liftT = 1;
+        tgt = lift > .92 ? REST : angle;
+        if (Math.abs(angle - REST) < .004) {
+          liftT = 0;
+          if (lift < .05) { state = 'idle'; if (pendingFlip) { pendingFlip = false; startFlip(); } }
+        }
+        break;
+      }
+      case 'flipping': {
+        flipT = Math.min(1, flipT + dt / 1.15);
+        if (flipT >= .5 && !flipped) { flipped = true; cur = other(cur); refreshCards(); }
+        if (flipT >= 1) { if (!flipped) { cur = other(cur); refreshCards(); } state = 'idle'; }
+        break;
+      }
+    }
+    lastRev = Math.floor(rot / (Math.PI * 2));
+
+    // arm motion
+    const diff = tgt - angle;
+    if (Math.abs(diff) < .004) angle = tgt;
+    else angle += Math.sign(diff) * Math.min(Math.abs(diff), Math.max(Math.abs(diff) * dt * 5, .12 * dt), .9 * dt);
+    lift = Math.max(0, Math.min(1, lift + Math.sign(liftT - lift) * dt * 3.2));
+    if (Math.abs(lift - liftT) < dt * 3.2) lift = liftT;
+
+    // surface noise
+    if (ac && crackGain) {
+      const down = (state === 'playing' || state === 'stopping' || state === 'runout') && lift < .15;
+      const level = down ? (+$('crackle').value / 100) * .55 * (omega / OMEGA45) : 0;
+      if (Math.abs(level - lastLevel) > .002) { crackGain.gain.setTargetAtTime(level, ac.currentTime, .04); lastLevel = level; }
+    }
+
+    // draw
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.drawImage(plinth, 0, 0, W, H);
+    drawPlatter();
+    drawAdapter();
+    drawRecord();
+    drawArm(angle, lift, true);
+    drawArm(angle, lift, false);
+
+    // front panel
+    const busy = state === 'cueing' || state === 'playing' || state === 'runout';
+    setText('playText', busy ? 'STOP' : 'START');
+    $('play').classList.toggle('on', motorOn || omega > .05);
+    $('flip').disabled = state === 'flipping';
+    const shown = sides[cur];
+    setText('tTime', `${fmt(shown.pos)} / ${shown.dur ? fmt(shown.dur) : '–:––'}`);
+    requestAnimationFrame(frame);
+  }
+
+
+  async function start() {
+    try { await Promise.all([
+      document.fonts.load('800 50px "Bricolage Grotesque"'), document.fonts.load('700 17px "Bricolage Grotesque"'),
+      document.fonts.load('500 10px "IBM Plex Mono"')]); } catch (e) {}
+    resize();
+    new ResizeObserver(() => { const w = Math.round(cv.clientWidth); if (w && Math.abs(w * (window.devicePixelRatio || 1) - cv.width) > 2) resize(); }).observe(cv);
+    refreshCards();
+    requestAnimationFrame(t => { last = t; frame(t); });
+    loadSide('A'); loadSide('B');
+  }
+  start();
+})();
+</script>
